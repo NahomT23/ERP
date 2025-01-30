@@ -23,7 +23,11 @@ const generatejwt = (user: User): string => {
 
 const app: Express = express();
 app.use(express.json());
-app.use(cors())
+app.use(cors({
+  origin: 'https://erp-seven-nu.vercel.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+}));
 
 const PORT = 3000;
 
@@ -55,7 +59,7 @@ app.post('/auth/signup', async (req: Request, res: Response) => {
 });
 
 
-app.post('auth/signin', async (req: Request, res: Response) => {
+app.post('/auth/signin', async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: {
@@ -80,7 +84,7 @@ app.post('auth/signin', async (req: Request, res: Response) => {
   }
 });
 
-app.get('auth/me', authentication, async (req: ExpressRequest, res: Response, next: NextFunction) => {
+app.get('/auth/me', authentication, async (req: ExpressRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.user) {
       res.status(401).json({ message: 'Unauthorized' });
