@@ -19,10 +19,10 @@ function App() {
       setLoading(true);
       setError(""); 
   
-      // const response = await fetch("http://localhost:3000/auth/signup", {
-        const response = await fetch("https://erp-seven-nu.vercel.app/api/auth/signup", {
+      const response = await fetch("http://localhost:3000/auth/signup", {
+        // const response = await fetch("https://erp-seven-nu.vercel.app/auth/signup", {
         method: "POST",
-        headers: {
+        headers: {  
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

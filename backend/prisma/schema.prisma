@@ -1,8 +1,8 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// // This is your Prisma schema file,
+// // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -13,9 +13,154 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+enum UserRole {
+  ADMIN
+  SALES_REPRESENTATIVE
+  INVENTORY_MANAGER
+  MANUFACTURING_MANAGER
+}
+
+enum SalesOrderStatus {
+  PENDING
+  COMPLETED
+}
+
+enum SalesInvoiceStatus {
+  PAID
+  UNPAID
+}
+
+enum InventoryStockStatus {
+  IN_STOCK
+  OUT_OF_STOCK
+}
+
+enum ManufacturingWorkOrderStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  users     User[]   @relation("CompanyUsers")  // Relation to Users
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model User {
-  id       String @id @default(uuid()) 
-  email    String @unique
-  username String
-  password String
+  id                      String            @id @default(uuid())
+  email                   String            @unique
+  username                String
+  password                String
+  role                    UserRole
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  status                  String            @default("inactive")
+  companyId              String            // Foreign key for Company
+  company                Company           @relation("CompanyUsers", fields: [companyId], references: [id])
+
+  failedLoginAttempts     Int               @default(0)
+  lockoutUntil            DateTime?
+
+  salesLeads              SalesLead[]       @relation("UserSalesLeads")
+  salesOrders             SalesOrder[]      @relation("UserSalesOrders")
+  inventoryPurchaseOrders InventoryPurchaseOrder[] @relation("UserInventoryOrders")
+  manufacturingWorkOrders ManufacturingWorkOrder[] @relation("UserWorkOrders")
+  auditLogs               AuditLog[]        
+}
+
+model AuditLog {
+  id           Int      @id @default(autoincrement())
+  action       String   
+  resourceType String  
+  resourceId   String  
+  details      String? 
+  createdAt    DateTime @default(now())
+  createdByUserId String
+  createdByUser   User    @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+}
+
+
+
+
+model SalesLead {
+  id                Int      @id @default(autoincrement())
+  customerName      String
+  contactInfo       String
+  communicationLog  String[]
+  pipelineStep      String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  salesOrders       SalesOrder[]
+
+  // User relationship
+  createdByUserId   String
+  createdByUser     User @relation("UserSalesLeads", fields: [createdByUserId], references: [id])
+}
+
+model SalesOrder {
+  id            Int      @id @default(autoincrement())
+  quotationId   Int      @unique
+  customerName  String
+  totalAmount   Float
+  status        SalesOrderStatus
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  salesLeadId   Int
+  salesLead     SalesLead @relation(fields: [salesLeadId], references: [id])
+  salesInvoices SalesInvoice[]
+
+  // User relationship
+  createdByUserId   String
+  createdByUser     User @relation("UserSalesOrders", fields: [createdByUserId], references: [id])
+}
+
+model SalesInvoice {
+  id           Int      @id @default(autoincrement())
+  salesOrderId Int
+  amount       Float
+  status       SalesInvoiceStatus
+  issuedAt     DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id])
+}
+
+model InventoryItem {
+  id           Int      @id @default(autoincrement())
+  itemName     String
+  quantity     Int
+  stockStatus  InventoryStockStatus
+  updatedAt    DateTime @updatedAt
+  inventoryPurchaseOrders InventoryPurchaseOrder[]
+}
+
+model InventoryPurchaseOrder {
+  id                Int      @id @default(autoincrement())
+  inventoryItemId   Int
+  quantity          Int
+  orderDate         DateTime @default(now())
+  inventoryItem     InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  // User relationship
+  createdByUserId   String
+  createdByUser     User @relation("UserInventoryOrders", fields: [createdByUserId], references: [id])
+}
+
+model ManufacturingWorkOrder {
+  id                 Int      @id @default(autoincrement())
+  productName        String
+  materialAvailable  Boolean
+  scheduleDate       DateTime
+  status             ManufacturingWorkOrderStatus
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // User relationship
+  createdByUserId    String
+  createdByUser      User @relation("UserWorkOrders", fields: [createdByUserId], references: [id])
 }
