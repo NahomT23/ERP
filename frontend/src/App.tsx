@@ -1,93 +1,38 @@
-import { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import SignIn from "../src/pages/Signin";
+import SignUp from "../src/pages/Signup";
+import CreateCompany from "../src/pages/CreateCompany";
+import SalesRepresentativeDashboard from "../src/pages/SalesRepresentativeDashboard";
+import ProtectedRoute from "../src/components/ProtectedRoute";
 
-function App() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-  
-    if (!username || !password || !email) {
-      setError("All fields are required");
-      return;
-    }
-  
-    try {
-      setLoading(true);
-      setError(""); 
-  
-      const response = await fetch("http://localhost:3000/auth/signup", {
-        // const response = await fetch("https://erp-seven-nu.vercel.app/auth/signup", {
-        method: "POST",
-        headers: {  
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username,
-          email,
-          password,
-        }),
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        alert("Signup successful!");
-
-      } else {
-        setError(data.message || "Something went wrong");
-      }
-    } catch (err) {
-      setError("Server error, please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-
+const App = () => {
   return (
-    <>
-      <div className="flex items-center justify-center">
-        <form onSubmit={handleSignup} className="space-y-4">
-          <p className="font-bold">Username</p>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="border px-3 py-2"
-          />
+    <BrowserRouter>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/create-company" element={<CreateCompany />} />
 
-          <p className="font-bold">Email</p>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="border px-3 py-2"
-          />
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute allowedRoles={["SALES_REPRESENTATIVE"]} />}>
+          <Route path="/sales-representative-dashboard" element={<SalesRepresentativeDashboard />} />
+        </Route>
 
-          <p className="font-bold">Password</p>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border px-3 py-2"
-          />
-
-          {error && <p className="text-red-500">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-500 text-white py-2 px-4 rounded"
-          >
-            {loading ? "Submitting..." : "Submit"}
-          </button>
-        </form>
-      </div>
-    </>
+        {/* Default Redirect */}
+        <Route path="/" element={<Navigate to="/signin" />} />
+      </Routes>
+    </BrowserRouter>
   );
-}
+};
 
 export default App;
+
+
+
+
+
+  // email
+  // salesrep@test.com
+  // password: 
+  //  SalesRep@123

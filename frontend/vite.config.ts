@@ -19,3 +19,5 @@ export default defineConfig({
     outDir: 'dist',  // Ensure the output directory is "dist"
   },
 });
+
+

@@ -14,11 +14,18 @@ datasource db {
 }
 
 
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
 enum UserRole {
   ADMIN
   SALES_REPRESENTATIVE
   INVENTORY_MANAGER
   MANUFACTURING_MANAGER
+  CUSTOMER 
 }
 
 enum SalesOrderStatus {
@@ -42,7 +49,41 @@ enum ManufacturingWorkOrderStatus {
   COMPLETED
 }
 
+enum LeadPipelineStep {
+  NEW
+  CONTACTED
+  QUALIFIED
+  NEGOTIATION
+  WON
+  LOST
+}
 
+
+model Customer {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  phone        String?
+  address      String?
+  salesLeads   SalesLead[]  @relation("CustomerSalesLeads") // Existing relation to SalesLead
+  salesOrders  SalesOrder[] @relation("CustomerSalesOrders") // Existing relation to SalesOrder
+  quotations   Quotation[]  @relation("CustomerQuotations") // New relation to Quotation
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+
+model Product {
+  id              Int         @id @default(autoincrement())
+  name            String
+  price           Float
+  description     String?
+  category        String?     
+  stockQuantity   Int         @default(0) // Stock quantity
+  unitOfMeasure   String?     
+  salesOrders     SalesOrder[] @relation("SalesOrderProducts")
+  inventoryItemId Int?
+}
 
 model Company {
   id        String   @id @default(uuid())
@@ -71,8 +112,11 @@ model User {
   salesOrders             SalesOrder[]      @relation("UserSalesOrders")
   inventoryPurchaseOrders InventoryPurchaseOrder[] @relation("UserInventoryOrders")
   manufacturingWorkOrders ManufacturingWorkOrder[] @relation("UserWorkOrders")
-  auditLogs               AuditLog[]        
+  auditLogs               AuditLog[]       
+  quotations             Quotation[]              @relation("UserQuotations") // New relation to Quotation 
 }
+
+
 
 model AuditLog {
   id           Int      @id @default(autoincrement())
@@ -85,39 +129,45 @@ model AuditLog {
   createdByUser   User    @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
 }
 
-
-
-
 model SalesLead {
-  id                Int      @id @default(autoincrement())
-  customerName      String
+  id                Int            @id @default(autoincrement())
+  customerId        String?        // Foreign key to Customer
+  customer          Customer?      @relation("CustomerSalesLeads", fields: [customerId], references: [id]) // Opposite relation
+  customerName      String         // Fallback if no customer is linked
   contactInfo       String
-  communicationLog  String[]
-  pipelineStep      String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  pipelineStep      LeadPipelineStep
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   salesOrders       SalesOrder[]
-
-  // User relationship
   createdByUserId   String
   createdByUser     User @relation("UserSalesLeads", fields: [createdByUserId], references: [id])
+  communicationLogs CommunicationLog[]
+}
+
+model CommunicationLog {
+  id          Int       @id @default(autoincrement())
+  leadId      Int
+  description String
+  timestamp   DateTime  @default(now())
+  lead        SalesLead @relation(fields: [leadId], references: [id])
 }
 
 model SalesOrder {
-  id            Int      @id @default(autoincrement())
-  quotationId   Int      @unique
-  customerName  String
-  totalAmount   Float
-  status        SalesOrderStatus
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  salesLeadId   Int
-  salesLead     SalesLead @relation(fields: [salesLeadId], references: [id])
-  salesInvoices SalesInvoice[]
-
-  // User relationship
+  id                Int              @id @default(autoincrement())
+  quotationId       Int              @unique
+  totalAmount       Float
+  status            SalesOrderStatus
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  salesLeadId       Int
+  salesLead         SalesLead        @relation(fields: [salesLeadId], references: [id])
+  salesInvoices     SalesInvoice[]
+  products          Product[]        @relation("SalesOrderProducts")
+  customerId        String?          // Foreign key to Customer
+  customer          Customer?        @relation("CustomerSalesOrders", fields: [customerId], references: [id])
   createdByUserId   String
-  createdByUser     User @relation("UserSalesOrders", fields: [createdByUserId], references: [id])
+  createdByUser     User             @relation("UserSalesOrders", fields: [createdByUserId], references: [id])
+  quotation         Quotation        @relation(fields: [quotationId], references: [id]) // Link to Quotation
 }
 
 model SalesInvoice {
@@ -163,4 +213,20 @@ model ManufacturingWorkOrder {
   // User relationship
   createdByUserId    String
   createdByUser      User @relation("UserWorkOrders", fields: [createdByUserId], references: [id])
+}
+
+
+
+
+model Quotation {
+  id             Int              @id @default(autoincrement())
+  customerId     String?          // Optional link to Customer
+  customer       Customer?        @relation("CustomerQuotations", fields: [customerId], references: [id])
+  totalAmount    Float
+  status         QuotationStatus  @default(DRAFT)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  salesOrders    SalesOrder[]     // Link to SalesOrder (optional)
+  createdByUserId String
+  createdByUser  User             @relation("UserQuotations", fields: [createdByUserId], references: [id])
 }
